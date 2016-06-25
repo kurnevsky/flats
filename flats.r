@@ -12,7 +12,7 @@ extend <- function(flats, stations, regions) {
   belonging_to_regions <- distances_to_regions == apply(distances_to_regions, 1, min)
   belonging_to_regions_indexes <- which(belonging_to_regions, arr.in = TRUE)
   region_numbers <- belonging_to_regions_indexes[order(belonging_to_regions_indexes[, 1]), 2]
-  flats$region <- factor(regions$name[region_numbers])
+  flats$region <- factor(regions$name[region_numbers], levels = levels(regions$name))
   return(flats)
 }
 
@@ -27,7 +27,7 @@ impute <- function(flats, my_flat) {
   return(flats)
 }
 
-flats <- read.csv(file = "onliner-2016-06-17T09:00:02.csv", head = TRUE, sep = ",", na.strings = c(""))
+flats <- read.csv(file = "onliner-2016-06-25T18:05:07.csv", head = TRUE, sep = ",", na.strings = c(""))
 
 flats$resale = flats$resale == 1
 flats$house_type = factor(flats$house_type)
