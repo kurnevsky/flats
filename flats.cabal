@@ -1,0 +1,34 @@
+name:                 flats
+version:              0.0.1
+license:              AGPL-3
+license-file:         LICENSE.txt
+author:               kurnevsky
+maintainer:           kurnevsky@gmail.com
+build-type:           Simple
+cabal-version:        >=1.10
+
+executable flats
+  hs-source-dirs:     src
+  main-is:            Main.hs
+  build-depends:      base,
+                      time,
+                      http-client,
+                      http-client-tls,
+                      async,
+                      aeson,
+                      bytestring,
+                      HandsomeSoup,
+                      cassava,
+                      network-uri,
+                      rate-limit,
+                      time-units,
+                      vector,
+                      utf8-string,
+                      hxt,
+                      regex-tdfa,
+                      http-types,
+                      containers
+  default-language:   Haskell2010
+  ghc-options:        -Wall
+                      -O2
+                      -threaded
