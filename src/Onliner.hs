@@ -337,12 +337,18 @@ grabExtInfo manager id' = do
       description = html >>> css "div.apartment-info__sub-line_extended-bottom" >>> getChildren >>> getText
   (,) <$> runX options <*> fmap unwords (runX description)
 
+data OnlinerErrorAction = OnlinerErrorAction404 | OnlinerErrorActionRetry
+
 grabExtInfoSafe :: Manager -> Int -> IO (Maybe ([String], String))
 grabExtInfoSafe manager id' =
-  catchJust (\case StatusCodeException status _ _ -> if statusCode status == 404 then Just () else Nothing; _ -> Nothing)
+  catchJust (\case StatusCodeException status _ _ -> if statusCode status == 404 then Just OnlinerErrorAction404 else Nothing
+                   FailedConnectionException _ _ -> Just OnlinerErrorActionRetry
+                   _ -> Nothing)
             (Just <$> grabExtInfo manager id')
-            (\_ -> do putStrLn $ "Error 404 for flat with id: " ++ show id'
-                      return Nothing)
+            (\case OnlinerErrorAction404 -> do putStrLn $ "Error 404 for flat with id: " ++ show id'
+                                               return Nothing
+                   OnlinerErrorActionRetry -> do putStrLn $ "Connection error for flat with id: " ++ show id'
+                                                 grabExtInfoSafe manager id')
 
 deduplicateBy :: Ord b => (a -> b) -> [a] -> [a]
 deduplicateBy f = map head . groupBy ((==) `on` f) . sortBy (compare `on` f)
