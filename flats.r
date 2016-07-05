@@ -27,7 +27,7 @@ impute <- function(flats, my_flat) {
   return(flats)
 }
 
-flats <- read.csv(file = "onliner-2016-06-25T18:05:07.csv", head = TRUE, sep = ",", na.strings = c(""))
+flats <- read.csv(file = "onliner-2016-06-29T20:12:04.csv", head = TRUE, sep = ",", na.strings = c(""))
 
 flats$resale = flats$resale == 1
 flats$house_type = factor(flats$house_type)
@@ -36,7 +36,7 @@ flats$parking = factor(flats$parking)
 flats$cottage = flats$cottage == 1
 flats$actual = flats$actual == 1
 
-flats <- flats[, c("latitude", "longitude", "price", "resale", "rooms", "total_floors", "floor", "total_area", "living_area", "kitchen_area", "house_type", "year", "balcony", "parking", "ceiling_height", "cottage", "actual")]
+flats <- flats[, c("id", "latitude", "longitude", "price", "resale", "rooms", "total_floors", "floor", "total_area", "living_area", "kitchen_area", "house_type", "year", "balcony", "parking", "ceiling_height", "cottage", "actual")]
 flats <- flats[flats$actual,]
 flats <- flats[!flats$cottage,]
 flats <- flats[flats$latitude > 53.75480084404933 & flats$latitude < 54.04165104090459 & flats$longitude > 27.321624755859375 & flats$longitude < 27.802276611328125,]
