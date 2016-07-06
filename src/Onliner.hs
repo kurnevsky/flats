@@ -10,7 +10,6 @@ import qualified Data.Map as Map
 import Control.Monad
 import Control.Exception
 import Data.Time
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.UTF8 as ULBS
 import Data.Aeson
 import Data.Aeson.Types
@@ -23,6 +22,8 @@ import Data.Time.Units
 import Text.XML.HXT.Core
 import Text.HandsomeSoup
 import Text.Regex.TDFA
+import Control.DeepSeq
+import Control.Concurrent.MSem
 import Flat
 
 onlinerTimeFormat :: String
@@ -296,11 +297,10 @@ grabPage manager (rooms, minPrice, maxPrice, page) = do
                                        , ("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:46.0) Gecko/20100101 Firefox/46.0")
                                        ]
                     }
-  withResponse req manager $ \response -> do
-    body <- responseBody response
-    return $ case eitherDecode (LBS.fromStrict body) of
-      Left e -> error $ "Onliner json: " ++ e
-      Right p -> p
+  response <- httpLbs req manager
+  return $ case eitherDecode (responseBody response) of
+    Left e -> error $ "Onliner json: " ++ e
+    Right p -> p
 
 grabAllPages :: GrabPageType -> Int -> Int -> Int -> IO [OnlinerPageResult]
 grabAllPages grabPage' rooms minPrice maxPrice = do
@@ -333,9 +333,12 @@ grabExtInfo manager id' = do
   response <- httpLbs req manager
   let body = responseBody response
       html = parseHtml $ ULBS.toString body
-      options = html >>> css "li.apartment-options__item" >>> getChildren >>> getText
-      description = html >>> css "div.apartment-info__sub-line_extended-bottom" >>> getChildren >>> getText
-  (,) <$> runX options <*> fmap unwords (runX description)
+      optionsA = html >>> css "li.apartment-options__item" >>> getChildren >>> getText
+      descriptionA = html >>> css "div.apartment-info__sub-line_extended-bottom" >>> getChildren >>> getText
+  options <- runX optionsA
+  description <- runX descriptionA
+  let result = (options, unwords description)
+  result `deepseq` return result
 
 data OnlinerErrorAction = OnlinerErrorAction404 | OnlinerErrorActionRetry
 
@@ -355,9 +358,10 @@ deduplicateBy f = map head . groupBy ((==) `on` f) . sortBy (compare `on` f)
 
 grab :: Manager -> IO [Flat]
 grab manager = do
+  semaphore <- new (20 :: Int)
   grabPageLimited <- rateLimitInvocation onlinerLimit $ grabPage manager
   grabExtInfoLimited <- rateLimitInvocation onlinerLimit $ grabExtInfoSafe manager
-  flats <- deduplicateBy onlinerFlatId <$> grabAll grabPageLimited
+  flats <- deduplicateBy onlinerFlatId <$> with semaphore (grabAll grabPageLimited)
   putStrLn $ "Total flats count: " ++ show (length flats)
-  flatsWithOptions <- mapConcurrently (\onlinerFlat -> fmap (onlinerFlat,) $ grabExtInfoLimited $ onlinerFlatId onlinerFlat) flats
+  flatsWithOptions <- mapConcurrently (\onlinerFlat -> fmap (onlinerFlat,) $ with semaphore $ grabExtInfoLimited $ onlinerFlatId onlinerFlat) flats
   return $ map (uncurry toFlat) flatsWithOptions
