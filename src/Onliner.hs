@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, MultiWayIf, LambdaCase, TupleSections #-}
+{-# LANGUAGE OverloadedStrings, MultiWayIf, LambdaCase, TupleSections, DeriveGeneric, DeriveAnyClass #-}
 
 module Onliner where
 
@@ -8,7 +8,7 @@ import Data.Char
 import Data.Maybe
 import qualified Data.Map as Map
 import Control.Monad
-import Control.Exception
+import GHC.Generics (Generic)
 import Data.Time
 import qualified Data.ByteString.Lazy.UTF8 as ULBS
 import Data.Aeson
@@ -129,8 +129,8 @@ instance FromJSON OnlinerSellerType where
   parseJSON invalid =
     typeMismatch "OnlinerSellerType" invalid
 
-data OnlinerSeller = OnlinerSeller { onlinerSellerType :: OnlinerSellerType
-                                   }
+newtype OnlinerSeller = OnlinerSeller { onlinerSellerType :: OnlinerSellerType
+                                      }
 
 instance FromJSON OnlinerSeller where
   parseJSON (Object seller) =
@@ -255,7 +255,11 @@ findParking = msum . map parseParking
 findCeilingHeight :: [String] -> Maybe Double
 findCeilingHeight = msum . map parseCeilingHeight
 
-toFlat :: OnlinerFlat -> Maybe ([String], String) -> Flat
+data OnlinerExtInfo = OnlinerExtInfo { onlinerExtInfoOptions :: [String]
+                                     , onlinerExtInfoDescription :: String
+                                     } deriving (Generic, NFData)
+
+toFlat :: OnlinerFlat -> Maybe OnlinerExtInfo -> Flat
 toFlat flat ext =
   Flat { flatId = Just $ show $ onlinerFlatId flat
        , flatAuthorId = Just $ show $ onlinerFlatAuthorId flat
@@ -284,17 +288,15 @@ toFlat flat ext =
        , flatActual = Just $ isJust ext
        , flatCottage = Just $ description =~ sps "(У|у)часток|(К|к)оттедж"
        } where toPrice = round . (read :: String -> Double)
-               options = maybe [] fst ext
-               description = maybe "" snd ext
+               options = maybe [] onlinerExtInfoOptions ext
+               description = maybe "" onlinerExtInfoDescription ext
 
 type GrabPageType = (Int, Int, Int, Int) -> IO OnlinerPageResult
 
 grabPage :: Manager -> GrabPageType
 grabPage manager (rooms, minPrice, maxPrice, page) = do
-  initReq <- parseUrl $ "GET " ++ onlinerFlatsUrl rooms minPrice maxPrice page
+  initReq <- parseRequest $ "GET " ++ onlinerFlatsUrl rooms minPrice maxPrice page
   let req = initReq { requestHeaders = [ ("Accept", "application/json")
-                                       , ("Accept-Encoding", "gzip, deflate, br")
-                                       , ("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:46.0) Gecko/20100101 Firefox/46.0")
                                        ]
                     }
   response <- httpLbs req manager
@@ -322,36 +324,30 @@ grabAll grabPage' = concat <$>
                   , price <- [onlinerMinPrice, onlinerMinPrice + onlinerPriceStep .. onlinerMaxPrice]
                   ] (fmap $ concatMap onlinerPageResultApartments)
 
-grabExtInfo :: Manager -> Int -> IO ([String], String)
+grabExtInfo :: Manager -> Int -> IO (Maybe OnlinerExtInfo)
 grabExtInfo manager id' = do
-  initReq <- parseUrl $ "GET " ++ onlinerOneFlatUrl id'
+  initReq <- parseRequest $ "GET " ++ onlinerOneFlatUrl id'
   let req = initReq { requestHeaders = [ ("Accept", "*/*")
-                                       , ("Accept-Encoding", "gzip, deflate, br")
-                                       , ("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:46.0) Gecko/20100101 Firefox/46.0")
                                        ]
                     }
   response <- httpLbs req manager
-  let body = responseBody response
-      html = parseHtml $ ULBS.toString body
-      optionsA = html >>> css "li.apartment-options__item" >>> getChildren >>> getText
-      descriptionA = html >>> css "div.apartment-info__sub-line_extended-bottom" >>> getChildren >>> getText
-  options <- runX optionsA
-  description <- runX descriptionA
-  let result = (options, unwords description)
-  result `deepseq` return result
-
-data OnlinerErrorAction = OnlinerErrorAction404 | OnlinerErrorActionRetry
-
-grabExtInfoSafe :: Manager -> Int -> IO (Maybe ([String], String))
-grabExtInfoSafe manager id' =
-  catchJust (\case StatusCodeException status _ _ -> if statusCode status == 404 then Just OnlinerErrorAction404 else Nothing
-                   FailedConnectionException _ _ -> Just OnlinerErrorActionRetry
-                   _ -> Nothing)
-            (Just <$> grabExtInfo manager id')
-            (\case OnlinerErrorAction404 -> do putStrLn $ "Error 404 for flat with id: " ++ show id'
-                                               return Nothing
-                   OnlinerErrorActionRetry -> do putStrLn $ "Connection error for flat with id: " ++ show id'
-                                                 grabExtInfoSafe manager id')
+  let status = responseStatus response
+  if | statusIsSuccessful status ->
+         let body = responseBody response
+             html = parseHtml $ ULBS.toString body
+             optionsA = html >>> css "li.apartment-options__item" >>> getChildren >>> getText
+             descriptionA = html >>> css "div.apartment-info__sub-line_extended-bottom" >>> getChildren >>> getText
+         in do options <- runX optionsA
+               description <- runX descriptionA
+               let result = Just OnlinerExtInfo { onlinerExtInfoOptions = options
+                                                , onlinerExtInfoDescription = unwords description
+                                                }
+               result `deepseq` return result
+     | statusCode status == 404 ->
+       do putStrLn $ "Error 404 for flat " ++ show id'
+          return Nothing
+     | otherwise ->
+       error $ "Bad response for flat " ++ show id' ++ ": " ++ show status
 
 deduplicateBy :: Ord b => (a -> b) -> [a] -> [a]
 deduplicateBy f = map head . groupBy ((==) `on` f) . sortBy (compare `on` f)
@@ -360,7 +356,7 @@ grab :: Manager -> IO [Flat]
 grab manager = do
   semaphore <- new (20 :: Int)
   grabPageLimited <- rateLimitInvocation onlinerLimit $ grabPage manager
-  grabExtInfoLimited <- rateLimitInvocation onlinerLimit $ grabExtInfoSafe manager
+  grabExtInfoLimited <- rateLimitInvocation onlinerLimit $ grabExtInfo manager
   flats <- deduplicateBy onlinerFlatId <$> with semaphore (grabAll grabPageLimited)
   putStrLn $ "Total flats count: " ++ show (length flats)
   flatsWithOptions <- mapConcurrently (\onlinerFlat -> fmap (onlinerFlat,) $ with semaphore $ grabExtInfoLimited $ onlinerFlatId onlinerFlat) flats

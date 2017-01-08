@@ -27,7 +27,7 @@ impute <- function(flats, my_flat) {
   return(flats)
 }
 
-flats <- read.csv(file = "onliner-2016-06-29T20:12:04.csv", head = TRUE, sep = ",", na.strings = c(""))
+flats <- read.csv(file = "onliner-2017-01-08T04:57:02.csv", head = TRUE, sep = ",", na.strings = c(""))
 
 flats$resale = flats$resale == 1
 flats$house_type = factor(flats$house_type)
@@ -69,6 +69,8 @@ flats <- flats[!rownames(flats) %in% names(outliers),]
 model <- lm(price ~ living_area + kitchen_area + other_area + house_type + year + balcony + ceiling_height + distance_to_subway + first_or_last_floor + region, data = flats)
 
 predict(model, my_flat)
+
+summary(model)
 
 
 
