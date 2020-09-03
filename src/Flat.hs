@@ -45,6 +45,7 @@ data Flat = Flat { flatId :: Maybe String
                  , flatCeilingHeight :: Maybe Double
                  , flatCottage :: Maybe Bool
                  , flatActual :: Maybe Bool
+                 , flatUrl :: Maybe String
                  }
 
 instance ToNamedRecord Flat where
@@ -73,6 +74,7 @@ instance ToNamedRecord Flat where
                 , "ceiling_height" .= flatCeilingHeight flat
                 , "cottage" .= fmap encodeBool (flatCottage flat)
                 , "actual" .= fmap encodeBool (flatActual flat)
+                , "url" .= flatUrl flat
                 ] where
       encodeBool :: Bool -> Int
       encodeBool b = if b then 1 else 0
@@ -114,4 +116,5 @@ instance DefaultOrdered Flat where
                            , "ceiling_height"
                            , "cottage"
                            , "actual"
+                           , "url"
                            ]

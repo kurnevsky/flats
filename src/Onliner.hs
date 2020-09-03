@@ -42,7 +42,7 @@ onlinerMaxPrice :: Int
 onlinerMaxPrice = 1000000
 
 onlinerPriceStep :: Int
-onlinerPriceStep = 10000
+onlinerPriceStep = 5000
 
 onlinerFlatsUrl :: Int -> Int -> Int -> Int -> String
 onlinerFlatsUrl rooms minPrice maxPrice page = escapeURIString (\c -> c /= '[' && c /= ']') $
@@ -58,7 +58,7 @@ onlinerOneFlatUrl id' =
   "https://r.onliner.by/pk/apartments/" ++ show id'
 
 onlinerLimit :: Millisecond
-onlinerLimit = fromMicroseconds 100000
+onlinerLimit = fromMicroseconds 200000
 
 data OnlinerLocation = OnlinerLocation { onlinerLocationAddress :: String
                                        , onlinerLocationUserAddress :: String
@@ -287,6 +287,7 @@ toFlat flat ext =
        , flatCeilingHeight = findCeilingHeight options
        , flatActual = Just $ isJust ext
        , flatCottage = Just $ description =~ sps "(У|у)часток|(К|к)оттедж"
+       , flatUrl = Just $ onlinerFlatUrl flat
        } where toPrice = round . (read :: String -> Double)
                options = maybe [] onlinerExtInfoOptions ext
                description = maybe "" onlinerExtInfoDescription ext
