@@ -92,6 +92,8 @@ registerPlugin <- function(map, plugin) {
 
 colors <- colorFactor(rainbow(nrow(regions), alpha = NULL), regions$name)
 
+options(browser="firefox")
+
 leaflet(data = flats) %>%
   addTiles() %>%
   addCircles(lat = regions$latitude, lng = regions$longitude, radius = 2000 / regions$radius_coef, stroke = FALSE, fillOpacity = 0.5, color = colors(regions$name)) %>%
