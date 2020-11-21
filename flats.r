@@ -36,7 +36,6 @@ flats$parking = factor(flats$parking)
 flats$cottage = flats$cottage == 1
 flats$actual = flats$actual == 1
 
-flats <- flats[, c("id", "latitude", "longitude", "price", "resale", "rooms", "total_floors", "floor", "total_area", "living_area", "kitchen_area", "house_type", "year", "balcony", "parking", "ceiling_height", "cottage", "actual")]
 flats <- flats[flats$actual,]
 flats <- flats[!flats$cottage,]
 flats <- flats[flats$latitude > 53.75480084404933 & flats$latitude < 54.04165104090459 & flats$longitude > 27.321624755859375 & flats$longitude < 27.802276611328125,]
