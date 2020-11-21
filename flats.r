@@ -81,15 +81,15 @@ coordinatesPlugin <- htmlDependency(
   "leaflet.coordinates",
   "0.1.3",
   src = c(href = "file:///home/kurnevsky/Downloads/"),
-  script = "Leaflet.Coordinates-0.1.3.min.js",
-  stylesheet = "Leaflet.Coordinates-0.1.3.css"
+  script = "Leaflet.Coordinates-0.1.5.min.js",
+  stylesheet = "Leaflet.Coordinates-0.1.5.css"
 )
 
 registerPlugin <- function(map, plugin) {
   map$dependencies <- c(map$dependencies, list(plugin))
   map
 }
- 
+
 colors <- colorFactor(rainbow(nrow(regions), alpha = NULL), regions$name)
 
 leaflet(data = flats) %>%
