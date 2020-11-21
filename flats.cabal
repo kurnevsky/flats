@@ -10,26 +10,26 @@ cabal-version:        >=1.10
 executable flats
   hs-source-dirs:     src
   main-is:            Main.hs
-  build-depends:      base == 4.9.0.0,
-                      time == 1.7.0.1,
-                      http-client == 0.5.5,
-                      http-client-tls == 0.3.3,
-                      async == 2.1.1,
-                      aeson == 1.1.0.0,
-                      bytestring == 0.10.8.1,
-                      HandsomeSoup == 0.4.2,
-                      cassava == 0.4.5.1,
-                      network-uri == 2.6.1.0,
-                      rate-limit == 1.1.1,
-                      time-units == 1.0.0,
-                      vector == 0.11.0.0,
-                      utf8-string == 1.0.1.1,
-                      hxt == 9.3.1.16,
-                      regex-tdfa == 1.2.2,
-                      http-types == 0.9.1,
-                      containers == 0.5.9.1,
-                      deepseq == 1.4.2.0,
-                      SafeSemaphore == 0.10.1
+  build-depends:      base,
+                      time,
+                      http-client,
+                      http-client-tls,
+                      async,
+                      aeson,
+                      bytestring,
+                      HandsomeSoup,
+                      cassava,
+                      network-uri,
+                      rate-limit,
+                      time-units,
+                      vector,
+                      utf8-string,
+                      hxt,
+                      regex-tdfa,
+                      http-types,
+                      containers,
+                      deepseq,
+                      SafeSemaphore
   default-language:   Haskell2010
   ghc-options:        -Wall
                       -O2
