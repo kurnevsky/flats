@@ -58,7 +58,7 @@ onlinerOneFlatUrl id' =
   "https://r.onliner.by/pk/apartments/" ++ show id'
 
 onlinerLimit :: Millisecond
-onlinerLimit = fromMicroseconds 200000
+onlinerLimit = fromMicroseconds 500000
 
 data OnlinerLocation = OnlinerLocation { onlinerLocationAddress :: String
                                        , onlinerLocationUserAddress :: String
