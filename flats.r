@@ -1,6 +1,7 @@
 library(geosphere)
 library(mice)
 library(dplyr)
+library(clue)
 
 set.seed(7)
 
@@ -16,15 +17,6 @@ extend <- function(flats, stations, regions) {
   )
   flats$first_or_last_floor <- flats$floor == 1 | flats$floor == flats$total_floors
   flats$other_area <- flats$total_area - flats$living_area - flats$kitchen_area
-  distances_to_regions <- distm(
-    flats[, c("longitude", "latitude")],
-    regions[, c("longitude", "latitude")],
-    fun = distHaversine
-  ) %*% diag(regions$radius_coef)
-  belonging_to_regions <- distances_to_regions == apply(distances_to_regions, 1, min)
-  belonging_to_regions_indexes <- which(belonging_to_regions, arr.in = TRUE)
-  region_numbers <- belonging_to_regions_indexes[order(belonging_to_regions_indexes[, 1]), 2]
-  flats$region <- factor(regions$name[region_numbers], levels = levels(regions$name))
   return(flats)
 }
 
@@ -51,7 +43,7 @@ impute <- function(flats, my_flat) {
   return(flats)
 }
 
-flats <- read.csv(file = "onliner-2017-01-08T04:57:02.csv", head = TRUE, sep = ",", na.strings = c(""))
+flats <- read.csv(file = "onliner-2020-11-21T18:46:21.csv", head = TRUE, sep = ",", na.strings = c(""))
 
 flats$resale <- flats$resale == 1
 flats$house_type <- factor(flats$house_type)
@@ -81,8 +73,11 @@ my_flat$parking <- factor(my_flat$parking, levels = levels(flats$parking))
 
 stations <- read.csv(file = "stations.csv", head = TRUE, sep = ",")
 
-regions <- read.csv(file = "regions.csv", head = TRUE, sep = ",")
-regions$name <- factor(regions$name)
+clusters <- kmeans(flats[, c("latitude", "longitude")], 32, iter.max = 1000)
+regions <- data.frame(clusters$centers)
+regions$name <- factor(seq_len(nrow(regions)))
+flats$region <- factor(clusters$cluster)
+my_flat$region <- factor(cl_predict(clusters, my_flat[, c("latitude", "longitude")]))
 
 flats <- extend(flats, stations, regions)
 my_flat <- extend(my_flat, stations, regions)
@@ -154,17 +149,9 @@ leaflet(data = flats) %>%
   addCircles(
     lat = regions$latitude,
     lng = regions$longitude,
-    radius = 2000 / regions$radius_coef,
+    radius = 1000,
     stroke = FALSE,
     fillOpacity = 0.5,
-    color = colors(regions$name)
-  ) %>%
-  addCircleMarkers(
-    lat = regions$latitude,
-    lng = regions$longitude,
-    radius = 10,
-    stroke = TRUE,
-    fillOpacity = 1,
     color = colors(regions$name)
   ) %>%
   addLegend("topright", colors = colors(regions$name), labels = regions$name) %>%
