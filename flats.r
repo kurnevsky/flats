@@ -98,7 +98,30 @@ leaflet(data = flats) %>%
   addTiles() %>%
   addCircles(lat = regions$latitude, lng = regions$longitude, radius = 2000 / regions$radius_coef, stroke = FALSE, fillOpacity = 0.5, color = colors(regions$name)) %>%
   addCircleMarkers(lat = regions$latitude, lng = regions$longitude, radius = 10, stroke = TRUE, fillOpacity = 1, color = colors(regions$name)) %>%
-  addCircleMarkers(lat = ~latitude, lng = ~longitude, radius = 7, stroke = FALSE, fillOpacity = 1, color = ~colors(region)) %>%
+  addLegend("topright", colors = colors(regions$name), labels = regions$name) %>%
+  addCircleMarkers(
+    lat = ~latitude,
+    lng = ~longitude,
+    radius = 7,
+    stroke = FALSE,
+    fillOpacity = 1,
+    color = ~colors(region),
+    label = ~price,
+    popup = paste0(
+      "rooms: ",
+      flats$rooms,
+      "<br>floor: ",
+      flats$floor,
+      "<br>year: ",
+      flats$year,
+      "<br>total area: ",
+      flats$total_area,
+      "<br>living area: ",
+      flats$living_area,
+      "<br>created: ",
+      flats$created
+    )
+  ) %>%
   registerPlugin(coordinatesPlugin) %>%
   onRender("function(el, x) {
     L.control.coordinates({
