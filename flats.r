@@ -174,7 +174,9 @@ leaflet(data = flats) %>%
       flats$total_area,
       "<br>living area: ",
       flats$living_area,
-      "<br>created: ",
+      "<br><a href=\"",
+      flats$url,
+      "\">created</a>: ",
       flats$created
     )
   ) %>%
